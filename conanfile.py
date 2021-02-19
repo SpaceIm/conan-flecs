@@ -37,14 +37,9 @@ class FlecsConan(ConanFile):
         tools.get(**self.conan_data["sources"][self.version])
         os.rename(self.name + "-" + self.version, self._source_subfolder)
 
-    def _patch_sources(self):
+    def build(self):
         for patch in self.conan_data.get("patches", {}).get(self.version, []):
             tools.patch(**patch)
-        tools.replace_in_file(os.path.join(self._source_subfolder, "cmake", "target_default_compile_options.cmake"),
-                              "-fPIC", "")
-
-    def build(self):
-        self._patch_sources()
         cmake = CMake(self)
         cmake.configure()
         cmake.build(target="flecs" if self.options.shared else "flecs_static")
