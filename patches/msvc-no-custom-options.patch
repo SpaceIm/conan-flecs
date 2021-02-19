@@ -1,0 +1,14 @@
+--- a/cmake/target_default_compile_options.cmake
++++ b/cmake/target_default_compile_options.cmake
+@@ -47,11 +47,6 @@ function(target_default_compile_options_c THIS)
+ 
+     elseif (CMAKE_C_COMPILER_ID STREQUAL "MSVC")
+ 
+-        target_compile_options(${THIS} PRIVATE
+-                $<$<CONFIG:DEBUG>:/Zi /Od /Ob0 /RTC1>
+-                $<$<CONFIG:RELEASE>:/O2 /Ob2 /DNDEBUG>
+-                $<$<CONFIG:RELWITHDEBINFO>:/Zi /O2 /Ob1 /DNDEBUG>
+-                $<$<CONFIG:MINSIZEREL>:/O1 /Ob1 /DNDEBUG>)
+ 
+     else ()
+ 
