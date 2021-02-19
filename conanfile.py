@@ -18,6 +18,7 @@ class FlecsConan(ConanFile):
 
     exports_sources = ["CMakeLists.txt", "patches/**"]
     generators = "cmake"
+    _cmake = None
 
     @property
     def _source_subfolder(self):
@@ -37,23 +38,35 @@ class FlecsConan(ConanFile):
         tools.get(**self.conan_data["sources"][self.version])
         os.rename(self.name + "-" + self.version, self._source_subfolder)
 
+    def _configure_cmake(self):
+        if self._cmake:
+            return self._cmake
+        self._cmake = CMake(self)
+        self._cmake.definitions["FLECS_STATIC_LIBS"] = not self.options.shared
+        self._cmake.definitions["FLECS_PIC"] = self.options.get_safe("fPIC", True)
+        self._cmake.definitions["FLECS_SHARED_LIBS"] = self.options.shared
+        self._cmake.definitions["FLECS_DEVELOPER_WARNINGS"] = False
+        self._cmake.configure()
+        return self._cmake
+
     def build(self):
         for patch in self.conan_data.get("patches", {}).get(self.version, []):
             tools.patch(**patch)
-        cmake = CMake(self)
-        cmake.configure()
-        cmake.build(target="flecs" if self.options.shared else "flecs_static")
+        cmake = self._configure_cmake()
+        cmake.build()
 
     def package(self):
         self.copy("LICENSE", dst="licenses", src=self._source_subfolder)
-        self.copy("*", dst="include", src=os.path.join(self._source_subfolder, "include"))
-        self.copy("*.lib", dst="lib", src="lib")
-        self.copy("*.dll", dst="bin", src="bin")
-        self.copy("*.a", dst="lib", src="lib")
-        self.copy("*.so*", dst="lib", src="lib", symlinks=True)
-        self.copy("*.dylib", dst="lib", src="lib", symlinks=True)
+        cmake = self._configure_cmake()
+        cmake.install()
+        tools.rmdir(os.path.join(self.package_folder, "lib", "cmake"))
 
     def package_info(self):
-        self.cpp_info.libs = ["flecs"] if self.options.shared else ["flecs_static"]
+        self.cpp_info.names["cmake_find_package"] = "flecs"
+        self.cpp_info.names["cmake_find_package_multi"] = "flecs"
+        target_and_lib_name = "flecs" if self.options.shared else "flecs_static"
+        self.cpp_info.components["_flecs"].names["cmake_find_package"] = target_and_lib_name
+        self.cpp_info.components["_flecs"].names["cmake_find_package_multi"] = target_and_lib_name
+        self.cpp_info.components["_flecs"].libs = [target_and_lib_name]
         if not self.options.shared:
-            self.cpp_info.defines.append("flecs_STATIC")
+            self.cpp_info.components["_flecs"].defines.append("flecs_STATIC")
